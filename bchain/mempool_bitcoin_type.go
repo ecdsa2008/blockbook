@@ -27,6 +27,13 @@ type MempoolBitcoinType struct {
 
 // NewMempoolBitcoinType creates new mempool handler.
 // For now there is no cleanup of sync routines, the expectation is that the mempool is created only once per process
+// 这个NewMempoolBitcoinType函数是用来创建并初始化一个特定于比特币类型的内存池(MempoolBitcoinType)实例的。它配置了内存池的基础结构、工作线程、以及用于处理交易和地址索引的逻辑。以下是对这个函数的逐步解析：
+// chain: 实现了BlockChain接口的区块链实例，用于与区块链交互。
+// workers: 工作线程的数量，这些线程用于处理交易ID到地址索引的映射。
+// subworkers: 每个工作线程下的子工作线程数量，用于并行处理更细粒度的任务。
+// golombFilterP: Golomb编码过滤器的参数P，用于构建轻量级的区块链数据过滤器。
+// filterScripts: 指定要用于过滤的脚本，可能用于定制化的交易筛选。
+// useZeroedKey: 是否在Golomb过滤器中使用零化密钥，这可能是出于隐私保护的考虑。
 func NewMempoolBitcoinType(chain BlockChain, workers int, subworkers int, golombFilterP uint8, filterScripts string, useZeroedKey bool) *MempoolBitcoinType {
 	m := &MempoolBitcoinType{
 		BaseMempool: BaseMempool{

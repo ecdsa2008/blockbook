@@ -115,6 +115,17 @@ func (w *SyncWorker) ResyncIndex(onNewBlock bchain.OnNewBlockFunc, initialSync b
 	return err
 }
 
+// resyncIndex方法是SyncWorker结构体的一部分，也是索引逻辑的核心所在，它的目的是同步本地数据库中的区块链数据与远程区块链（如比特币网络）的最新状态。
+// 这个过程包括检查本地索引的最新区块是否与网络上的最新区块一致，处理可能的分叉情况，以及在需要时同步缺失的区块数据。以下是该方法的详细步骤和逻辑：
+// 1. 获取远程最新区块哈希：首先，通过调用w.chain.GetBestBlockHash()获取远程区块链的最新区块哈希。
+// 2. 获取本地最新区块哈希：然后，通过调用w.db.GetBestBlock()获取本地数据库中的最新区块哈希和高度。
+// 3. 检查本地索引是否已同步：如果本地最新区块哈希与远程最新区块哈希相同，则表示本地索引已经同步，不需要再次同步，直接返回errSynced。
+// 4. 检查本地索引是否分叉：如果本地最新区块哈希与远程最新区块哈希不同，但本地索引中存在相同高度的区块哈希与远程区块哈希不同，表示本地索引存在分叉，需要处理分叉情况。
+// 5. 处理分叉情况：调用w.handleFork()方法处理分叉情况，该方法会从分叉点开始断开区块链，然后重新同步区块链数据。
+// 6. 同步区块链数据：如果本地索引不是分叉状态，调用w.connectBlocks()方法同步区块链数据，该方法会从本地最新区块高度+1开始，逐个连接区块，直到远程最新区块高度。
+// 7. 并行同步区块链数据：如果并行操作已启用，并且需要同步的区块数量较大，调用w.ConnectBlocksParallel()方法使用多个goroutine并行加载区块数据。
+// 8. 更新后端信息：同步完成后，调用w.updateBackendInfo()方法更新后端信息。
+// 9. 返回同步结果：根据同步结果返回相应的错误信息。
 func (w *SyncWorker) resyncIndex(onNewBlock bchain.OnNewBlockFunc, initialSync bool) error {
 	remoteBestHash, err := w.chain.GetBestBlockHash()
 	if err != nil {

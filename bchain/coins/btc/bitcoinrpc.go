@@ -39,6 +39,59 @@ type BitcoinRPC struct {
 }
 
 // Configuration represents json config file
+// 这个Configuration结构体定义了一组用于配置与Bitcoin RPC服务器交互的参数。这些配置通常用于指定连接详情、认证信息、以及如何处理特定的区块链数据。下面是每个字段的详细解释：
+//
+// CoinName: 加密货币的名称，如"Bitcoin"。
+//
+// CoinShortcut: 加密货币的简称，如"BTC"。
+//
+// RPCURL: Bitcoin RPC服务器的URL地址，用于客户端连接和发送RPC调用。
+//
+// RPCUser: 用于RPC认证的用户名。
+//
+// RPCPass: 用于RPC认证的密码。
+//
+// RPCTimeout: RPC调用的超时时间，以秒为单位。
+//
+// AddressAliases: 是否启用地址别名功能，可能用于某些特定的优化或功能。
+//
+// Parse: 是否解析区块链数据，这可能影响如何处理接收到的数据。
+//
+// MessageQueueBinding: 消息队列的绑定地址，如果系统使用消息队列（如ZeroMQ）进行通信，这里指定其配置。
+//
+// Subversion: 软件的子版本号，可能用于兼容性或特定功能的启用。
+//
+// BlockAddressesToKeep: 保留的地址块数量，可能与缓存或数据存储优化相关。
+//
+// MempoolWorkers: 用于处理内存池数据的工作线程数量。
+//
+// MempoolSubWorkers: 内存池订阅工作的子工作线程数量。
+//
+// AddressFormat: 地址格式，指定如何解析和显示地址。
+//
+// SupportsEstimateFee: 是否支持估计交易费用的功能。
+//
+// SupportsEstimateSmartFee: 是否支持智能估计交易费用的功能。
+//
+// XPubMagic: 扩展公钥（xPub）的魔数，用于特定加密货币。
+//
+// XPubMagicSegwitP2sh: 适用于SegWit P2SH地址的扩展公钥的魔数。
+//
+// XPubMagicSegwitNative: 适用于SegWit原生地址的扩展公钥的魔数。
+//
+// Slip44: 指定的加密货币在SLIP-44标准中的代码。
+//
+// AlternativeEstimateFee: 提供交易费用估计的替代方法或API。
+//
+// AlternativeEstimateFeeParams: 替代费用估计方法的参数。
+//
+// MinimumCoinbaseConfirmations: Coinbase交易确认的最小数量，影响何时认为区块奖励可用。
+//
+// MempoolGolombFilterP: 内存池Golomb编码过滤器的参数P，用于隐私增强的轻量客户端。
+//
+// MempoolFilterScripts: 指定用于创建内存池过滤器的脚本。
+//
+// MempoolFilterUseZeroedKey: 是否在创建内存池过滤器时使用零化密钥，出于隐私考虑。
 type Configuration struct {
 	CoinName                     string `json:"coin_name"`
 	CoinShortcut                 string `json:"coin_shortcut"`

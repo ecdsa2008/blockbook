@@ -7,6 +7,32 @@ import (
 )
 
 // Metrics holds prometheus collectors for various metrics collected by Blockbook
+// 用来定义Blockbook项目中用于性能监控和度量的各种Prometheus指标
+// SocketIORequests: 通过Socket.IO接口收到的请求总数。
+// SocketIOSubscribes: 通过Socket.IO接口进行的订阅操作总数。
+// SocketIOClients: 当前通过Socket.IO连接的客户端数量。
+// SocketIOReqDuration: Socket.IO请求的处理时间分布。
+// WebsocketRequests: 通过WebSocket接口收到的请求总数。
+// WebsocketSubscribes: 通过WebSocket接口进行的订阅操作次数。
+// WebsocketClients: 当前通过WebSocket连接的客户端数量。
+// WebsocketReqDuration: WebSocket请求的处理时间分布。
+// IndexResyncDuration: 索引重新同步的持续时间。
+// MempoolResyncDuration: 内存池重新同步的持续时间。
+// TxCacheEfficiency: 交易缓存效率指标。
+// RPCLatency: RPC请求的延迟分布。
+// IndexResyncErrors: 索引重新同步过程中发生错误的次数。
+// IndexDBSize: 索引数据库的大小。
+// ExplorerViews: 浏览器视图请求总数。
+// MempoolSize: 内存池的大小。
+// EstimatedFee: 估计的交易费用。
+// AvgBlockPeriod: 平均区块产生时间。
+// DbColumnRows, DbColumnSize: 数据库列的行数和大小。
+// BlockbookAppInfo: Blockbook应用程序的信息，可能包括版本号等。
+// BackendBestHeight, BlockbookBestHeight: 后端节点和Blockbook本地索引数据库中的最高区块高度。
+// ExplorerPendingRequests, WebsocketPendingRequests, SocketIOPendingRequests: 待处理的请求数量。
+// XPubCacheSize: 扩展公钥(XPub)缓存的大小。
+// CoingeckoRequests: 发送到CoinGecko API的请求总数。
+
 type Metrics struct {
 	SocketIORequests         *prometheus.CounterVec
 	SocketIOSubscribes       *prometheus.CounterVec

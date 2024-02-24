@@ -61,6 +61,14 @@ type Vin struct {
 }
 
 // ScriptPubKey contains data about output script
+//
+//	"script": {
+//			      "addresses": [
+//			        "bc1q42pvy92zlmd8vg2utqnazkmwz08ranpa0fkc6y"
+//			      ],
+//			      "asm": "OP_0 aa82c21542feda76215c5827d15b6e13ce3ecc3d",
+//			      "hex": "0014aa82c21542feda76215c5827d15b6e13ce3ecc3d"
+//			    },
 type ScriptPubKey struct {
 	// Asm       string   `json:"asm"`
 	Hex string `json:"hex,omitempty"`

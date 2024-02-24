@@ -24,6 +24,7 @@ func NewBitcoreRPC(config json.RawMessage, pushHandler func(bchain.NotificationT
 	s := &BitcoreRPC{
 		b.(*btc.BitcoinRPC),
 	}
+
 	s.RPCMarshaler = btc.JSONMarshalerV2{}
 	s.ChainConfig.SupportsEstimateFee = false
 

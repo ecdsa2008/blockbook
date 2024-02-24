@@ -86,7 +86,6 @@ var (
 
 	extendedIndex = flag.Bool("extendedindex", false, "if true, create index of input txids and spending transactions")
 )
-
 var (
 	chanSyncIndex                 = make(chan struct{})
 	chanSyncMempool               = make(chan struct{})
@@ -113,13 +112,28 @@ func init() {
 	glog.MaxSize = 1024 * 1024 * 8
 	glog.CopyStandardLogTo("INFO")
 }
-
 func main() {
+	// 使用defer和recover来捕获和处理main函数或它调用的任何函数中发生的panic。
+	// 记录panic的信息和调用栈，以便后续分析和调试。
+	// 确保即使在遇到panic的情况下，程序也能通过调用os.Exit以指定的退出码安全退出，这里选择的是-1作为错误的标识。
+
+	// note：defer和recover的使用是为了保证程序在遇到panic的情况下能够安全退出，而不是为了处理错误。
+	// 一般情况下，我们应该尽量避免使用panic和recover，而是使用error来处理错误。
+	// 但是在某些情况下，比如程序遇到了不可恢复的错误，或者是程序的状态已经不再可控，这时候使用panic和recover是合理的。
+
+	// panic捕获要求defer和recover必须成对出现，defer用于注册一个函数，这个函数会在当前函数退出时被调用，recover用于捕获panic。
+	// 但是，defer和recover并不是一对一的关系，defer可以注册多个函数，recover只能捕获最近的一个panic。
+
+	// 一般情况下，我们会在main函数中使用defer和recover来捕获和处理main函数或它调用的任何函数中发生的panic。
+	// 但是，如果main函数中的defer和recover不能捕获到panic，那么程序就会直接退出，而不会执行defer中注册的函数。
+	// 所以，为了确保程序能够安全退出，我们可以在main函数中使用defer和recover来捕获和处理main函数或它调用的任何函数中发生的panic。
+
+	// 捕获逻辑和panic出现的位置必须在同一个goroutine中，否则无法捕获panic。
 	defer func() {
 		if e := recover(); e != nil {
 			glog.Error("main recovered from panic: ", e)
-			debug.PrintStack()
-			os.Exit(-1)
+			debug.PrintStack() // 记录panic的信息和调用栈，以便后续分析和调试。
+			os.Exit(-1)        // 正常退出的程序会返回0，非0的返回码通常用于指示错误。
 		}
 	}()
 	os.Exit(mainWithExitCode())
@@ -129,21 +143,33 @@ func main() {
 func mainWithExitCode() int {
 	flag.Parse()
 
+	// glog.Flush()会将日志缓冲区的日志写入到文件中，然后关闭文件。
 	defer glog.Flush()
 
+	// rand.Seed()用于设置随机数生成器的种子，不同的种子会产生不同的随机数序列。
 	rand.Seed(time.Now().UTC().UnixNano())
 
+	// make(chan os.Signal, 1)创建一个容量为1的通道，用于接收操作系统的信号。
 	chanOsSignal = make(chan os.Signal, 1)
+	// signal.Notify()用于将指定的信号发送到指定的通道, 通常用于监听操作系统的信号。
+	// syscall.SIGHUP：终端挂起或控制进程终止, 通常是终端关闭或者用户注销。
+	// syscall.SIGINT：键盘中断（如break键被按下）, 通常是Ctrl+C或Ctrl+D。
+	// syscall.SIGQUIT：键盘的退出键被按下, 通常是Ctrl+\或Ctrl+4。
+	// syscall.SIGTERM：进程终止信号, 通常用来要求程序自己正常退出。
 	signal.Notify(chanOsSignal, syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
 
+	// %+v 用于 common.GetVersionInfo() 的返回值，%+v 的作用是在打印结构体时会包括字段名，这对于打印更详细的信息很有帮助。
+	// %v 用于 *debugMode 的值，%v 的作用是打印变量的默认格式。
 	glog.Infof("Blockbook: %+v, debug mode %v", common.GetVersionInfo(), *debugMode)
 
+	// 如果 *prof 不为空，则启动一个 http server，用于监听指定的地址和端口，并提供性能分析数据。
 	if *prof != "" {
 		go func() {
 			log.Println(http.ListenAndServe(*prof, nil))
 		}()
 	}
 
+	// 修复database
 	if *repair {
 		if err := db.RepairRocksDB(*dbPath); err != nil {
 			glog.Errorf("RepairRocksDB %s: %v", *dbPath, err)
@@ -152,12 +178,14 @@ func mainWithExitCode() int {
 		return exitCodeOK
 	}
 
+	// 区块链RPC服务配置json文件的路径
 	config, err := common.GetConfig(*configFile)
 	if err != nil {
 		glog.Error("config: ", err)
 		return exitCodeFatal
 	}
 
+	// 获取prometheus监控指标，如果获取失败，则记录错误并返回
 	metrics, err = common.GetMetrics(config.CoinName)
 	if err != nil {
 		glog.Error("metrics: ", err)
@@ -372,6 +400,27 @@ func mainWithExitCode() int {
 	return exitCodeOK
 }
 
+// getBlockChainWithRetry
+// 主要目的是尝试创建和初始化一个区块链接口及其内存池（mempool），并且具备重试机制。如果在第一次尝试时遇到错误，它会根据提供的秒数重试，直到成功或超出重试次数。这个函数对于处理网络延迟或暂时性服务不可用情况很有用，尤其是在初始化区块链连接时。下面是代码的详细解释：
+// 函数参数：
+// coin: 代表加密货币的字符串，如"BTC"、"ETH"等。
+// configFile: 区块链节点配置文件的路径。
+// pushHandler: 一个回调函数，用于处理区块链事件通知。
+// metrics: 指向一个common.Metrics结构体的指针，用于收集和监控指标数据。
+// seconds: 重试的最大秒数，也可以理解为重试的最大次数。
+// 内部变量：
+// chain: 用于存储初始化成功后的区块链接口。
+// mempool: 存储初始化成功后的内存池接口。
+// err: 存储错误信息。
+// 重试逻辑：
+// 使用time.NewTimer创建一个计时器，每次重试间隔1秒。
+// 通过无限循环，使用coins.NewBlockChain函数尝试创建和初始化区块链和内存池。
+// 如果coins.NewBlockChain返回错误，并且当前重试次数小于seconds参数，则记录错误信息，并等待计时器超时后再次重试。
+// 如果在chanOsSignal通道接收到信号（这可能是一个用于处理系统中断信号的通道），则提前退出并返回错误，表示初始化过程被中断。
+// 如果超过了最大重试次数还未成功，则返回错误。
+// 成功返回：
+// 如果coins.NewBlockChain成功返回，没有错误，那么函数将返回初始化好的chain和mempool接口，以及nil错误。
+// 这个函数的设计考虑到了健壮性和灵活性，能够在遇到暂时性的连接问题时通过重试机制提高成功率，同时也提供了中断机制以响应系统退出信号。
 func getBlockChainWithRetry(coin string, configFile string, pushHandler func(bchain.NotificationType), metrics *common.Metrics, seconds int) (bchain.BlockChain, bchain.Mempool, error) {
 	var chain bchain.BlockChain
 	var mempool bchain.Mempool
@@ -697,7 +746,6 @@ func initDownloaders(db *db.RocksDB, chain bchain.BlockChain, config *common.Con
 	if fiatRates.Enabled {
 		go fiatRates.RunDownloader()
 	}
-
 	if config.FourByteSignatures != "" && chain.GetChainParser().GetChainType() == bchain.ChainEthereumType {
 		fbsd, err := fourbyte.NewFourByteSignaturesDownloader(db, config.FourByteSignatures)
 		if err != nil {
@@ -706,7 +754,5 @@ func initDownloaders(db *db.RocksDB, chain bchain.BlockChain, config *common.Con
 			glog.Infof("Starting FourByteSignatures downloader...")
 			go fbsd.Run()
 		}
-
 	}
-
 }
